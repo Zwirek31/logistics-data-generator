@@ -3,6 +3,7 @@ from sqlalchemy import create_engine, text
 import sys
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -14,8 +15,7 @@ def connect_to_db():
 
     except Exception as e:
         print(f"Startup error: {e}")
-
-sys.exit()
+        sys.exit()
 
 def clear_tables(engine):
     tables = ["invoices", "shipments", "customers", "warehouses"]
@@ -39,13 +39,15 @@ def insert_warehouses(engine):
 
     stmt = text("""INSERT INTO warehouses(name, address, city)
         VALUES (:name, :address, :city)
-        RETURNING id
+        RETURNING warehouse_id
         """)
 
     with engine.connect() as conn:
-        result = conn.execute(stmt, data)
-
-        warehouse_ids = [row[0] for row in result.fetchall()]
+        warehouse_ids = []
+        
+        for warehouse in data: 
+            result = conn.execute(stmt, warehouse)
+            warehouse_ids.append(result.scalar())
 
         conn.commit()
 
@@ -65,7 +67,7 @@ def insert_customers(engine):
 
     stmt = text("""INSERT INTO customers(name, industry)
             VALUES (:name, :industry)
-            RETURNING id
+            RETURNING customer_id
             """)
 
     with engine.connect() as conn:
@@ -77,7 +79,23 @@ def insert_customers(engine):
 
     return customer_ids
 
+def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
+    
+    week_start = []
+    
+    for week in range(5):
+        shift = week * 7
+        week_number = base_date + timedelta(days=shift)
+        week_start.append(week_number)
+
+
+
+    return week_start
+
+
 def main():
+
+    base_date = datetime(2026, 3, 9)
 
     engine = connect_to_db()
 
@@ -87,6 +105,8 @@ def main():
 
     customer_ids = insert_customers(engine)
 
+    print("Inserted warehouses:", warehouse_ids)
+    print("Inserted customers:", customer_ids)
 
 if __name__ == "__main__":
 
