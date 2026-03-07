@@ -71,13 +71,15 @@ def insert_customers(engine):
             """)
 
     with engine.connect() as conn:
-        result = conn.execute(stmt, customers)
+        customer_ids = []
 
-        customer_ids = [row[0] for row in result.fetchall()]
-        
+        for customer in customers:
+            result = conn.execute(stmt, customer)
+            customer_ids.append(result.scalar())
+
         conn.commit()
 
-    return customer_ids
+        return customer_ids
 
 def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
     
@@ -88,10 +90,7 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
         week_number = base_date + timedelta(days=shift)
         week_start.append(week_number)
 
-
-
-    return week_start
-
+        return week_start
 
 def main():
 
