@@ -4,6 +4,7 @@ import sys
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import random
 
 load_dotenv()
 
@@ -90,7 +91,32 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
         week_number = base_date + timedelta(days=shift)
         week_start.append(week_number)
 
-        return week_start
+    shipment_list = []
+
+    for week in week_start:
+        number_of_shipments = random.randint(8, 15)
+        
+        for _ in range(number_of_shipments):
+            warehouse_id = random.choice(warehouse_ids)
+            customer_id = random.choice(customer_ids)
+            hours = random.randint(0, 72)
+            created_at = week + timedelta(hours=hours)
+            random_hours = random.randint(6, 24)
+            planned_delivery_date = created_at + timedelta(hours=random_hours)
+            delay = random.randint(0, 10)
+            actual_delivery_date = planned_delivery_date + timedelta(hours=delay)
+            status = "DELIVERED"
+            shipment = {
+                "warehouse_id": warehouse_id,
+                "customer_id": customer_id,
+                "created_at": created_at,
+                "planned_delivery_date": planned_delivery_date,
+                "actual_delivery_date": actual_delivery_date,
+                "status": status
+            }
+            shipment_list.append(shipment)
+            
+    return week_start, shipment_list
 
 def main():
 
@@ -103,9 +129,6 @@ def main():
     warehouse_ids = insert_warehouses(engine)
 
     customer_ids = insert_customers(engine)
-
-    print("Inserted warehouses:", warehouse_ids)
-    print("Inserted customers:", customer_ids)
 
 if __name__ == "__main__":
 
