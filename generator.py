@@ -28,6 +28,7 @@ def clear_tables(engine):
 
         conn.commit()
 
+
 def insert_warehouses(engine):
 
     data = [
@@ -53,6 +54,7 @@ def insert_warehouses(engine):
         conn.commit()
 
         return warehouse_ids
+
 
 def insert_customers(engine):
     customers = [
@@ -82,6 +84,7 @@ def insert_customers(engine):
 
         return customer_ids
 
+
 def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
     
     week_start = []
@@ -107,9 +110,9 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
             actual_delivery_date = planned_delivery_date + timedelta(hours=delay)
             status = "DELIVERED"
             shipment = {
-                "warehouse_id": warehouse_id,
                 "customer_id": customer_id,
                 "created_at": created_at,
+                "warehouse_id": warehouse_id,
                 "planned_delivery_date": planned_delivery_date,
                 "actual_delivery_date": actual_delivery_date,
                 "status": status
@@ -117,6 +120,27 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
             shipment_list.append(shipment)
             
     return week_start, shipment_list
+
+def insert_shipments(engine, shipment_list):
+
+    stmt = text("""INSERT INTO shipments(customer_id, created_at, warehouse_id, planned_delivery_date, actual_delivery_date, status)
+            VALUES (:customer_id, :created_at, :warehouse_id, :planned_delivery_date, :actual_delivery_date, :status)
+            """)
+    
+    with engine.connect() as conn:
+        for shipment in shipment_list:
+            conn.execute(stmt, shipment)
+        
+        conn.commit()
+
+def read_shipments_from_db(engine):
+    
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT shipment_id, actual_delivery_date FROM shipments"))
+        shipments_rows = [(row.shipment_id, row.actual_delivery_date) for row in result]
+
+    return shipments_rows
+
 
 def main():
 
