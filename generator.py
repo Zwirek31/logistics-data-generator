@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import random
+from collections import defaultdict
 
 load_dotenv()
 
@@ -133,13 +134,23 @@ def insert_shipments(engine, shipment_list):
         
         conn.commit()
 
+
 def read_shipments_from_db(engine):
     
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT shipment_id, actual_delivery_date FROM shipments"))
-        shipments_rows = [(row.shipment_id, row.actual_delivery_date) for row in result]
+        result = conn.execute(text("SELECT shipment_id, DATE_TRUNC('week', actual_delivery_date) as week_start FROM shipments"))
+        shipments_rows = [(row.shipment_id, row.week_start) for row in result]
 
     return shipments_rows
+
+
+def build_week_shipment_map(shipment_rows):
+
+    week_map = defaultdict(list)
+
+    for shipment_id, week_start in shipment_rows:
+        week_map[week_start].append(shipment_id)
+
 
 
 def main():
