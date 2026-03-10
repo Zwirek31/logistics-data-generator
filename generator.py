@@ -120,7 +120,7 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
             }
             shipment_list.append(shipment)
             
-    return week_start, shipment_list
+    return shipment_list
 
 def insert_shipments(engine, shipment_list):
 
@@ -144,13 +144,19 @@ def read_shipments_from_db(engine):
     return shipments_rows
 
 
-def build_week_shipment_map(shipment_rows):
+def build_week_shipment_map(shipments_rows):
 
     week_map = defaultdict(list)
 
-    for shipment_id, week_start in shipment_rows:
+    for shipment_id, week_start in shipments_rows:
         week_map[week_start].append(shipment_id)
 
+    return week_map
+
+
+def generate_invoices_for_shipments(week_map):
+
+    for shipment in week_map
 
 
 def main():
@@ -164,6 +170,10 @@ def main():
     warehouse_ids = insert_warehouses(engine)
 
     customer_ids = insert_customers(engine)
+
+    shipment_list = generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids)
+
+    insert_shipments(engine, shipment_list)
 
 if __name__ == "__main__":
 
