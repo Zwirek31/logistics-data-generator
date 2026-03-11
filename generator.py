@@ -156,7 +156,39 @@ def build_week_shipment_map(shipments_rows):
 
 def generate_invoices_for_shipments(week_map):
 
-    for shipment in week_map
+    week_revenue_targets = [ 
+        10000,
+        9500,
+        7000,
+        7200,
+        9800
+        ]
+    
+    invoices = []
+
+    for (shipments_ids), target in zip(week_map.items(), week_revenue_targets):
+        n = len(shipments_ids)
+        weights = [random.uniform(0.9, 1.1) for _ in range(n)]
+        total_weight = sum(weights)
+       
+        unit_value = target / total_weight
+        
+        for (weight, shipment_id) in zip(weights, shipments_ids):
+            amount = weight * unit_value
+            has_correction = random.random() < 0.15
+            if has_correction:
+                correction_value = amount * random.uniform(0.05, 0.2)
+                normal_amount = amount + correction_value
+                correction_amount = -correction_value
+                
+                invoices.append((shipment_id, normal_amount, "NORMAL", None)) 
+                invoices.append((shipment_id, correction_amount, "CORRECTION", shipment_id))
+            
+            else:
+                invoices.append((shipment_id, amount, "NORMAL", None))
+
+    return invoices 
+        
 
 
 def main():
