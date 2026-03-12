@@ -1,4 +1,3 @@
-import pandas as pd
 from sqlalchemy import create_engine, text
 import sys
 import os
@@ -22,13 +21,9 @@ def connect_to_db():
 def clear_tables(engine):
     tables = ["invoices", "shipments", "customers", "warehouses"]
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         table_list = ", ".join(tables)
-
         conn.execute(text(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE;"))
-
-        conn.commit()
-
 
 def insert_warehouses(engine):
 
@@ -45,17 +40,14 @@ def insert_warehouses(engine):
         RETURNING warehouse_id
         """)
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         warehouse_ids = []
         
         for warehouse in data: 
             result = conn.execute(stmt, warehouse)
             warehouse_ids.append(result.scalar())
 
-        conn.commit()
-
-        return warehouse_ids
-
+    return warehouse_ids
 
 def insert_customers(engine):
     customers = [
@@ -74,17 +66,14 @@ def insert_customers(engine):
             RETURNING customer_id
             """)
 
-    with engine.connect() as conn:
+    with engine.begin() as conn:
         customer_ids = []
 
         for customer in customers:
             result = conn.execute(stmt, customer)
             customer_ids.append(result.scalar())
 
-        conn.commit()
-
-        return customer_ids
-
+    return customer_ids
 
 def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
     
@@ -124,15 +113,18 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
 
 def insert_shipments(engine, shipment_list):
 
-    stmt = text("""INSERT INTO shipments(customer_id, created_at, warehouse_id, planned_delivery_date, actual_delivery_date, status)
+    try:
+
+        stmt = text("""INSERT INTO shipments(customer_id, created_at, warehouse_id, planned_delivery_date, actual_delivery_date, status)
             VALUES (:customer_id, :created_at, :warehouse_id, :planned_delivery_date, :actual_delivery_date, :status)
             """)
     
-    with engine.connect() as conn:
-        for shipment in shipment_list:
-            conn.execute(stmt, shipment)
+        with engine.begin() as conn:
+            for shipment in shipment_list:
+                conn.execute(stmt, shipment)
         
-        conn.commit()
+    except Exception as e: 
+        print(f"Wystąpił błąd: {e}")
 
 
 def read_shipments_from_db(engine):
@@ -156,6 +148,7 @@ def build_week_shipment_map(shipments_rows):
 
 def generate_invoices_for_shipments(week_map):
 
+    week_map_sorted = dict(sorted(week_map.items()))
     week_revenue_targets = [ 
         10000,
         9500,
@@ -166,7 +159,7 @@ def generate_invoices_for_shipments(week_map):
     
     invoices = []
 
-    for (shipments_ids), target in zip(week_map.items(), week_revenue_targets):
+    for (_, shipments_ids), target in zip(week_map_sorted.items(), week_revenue_targets):
         n = len(shipments_ids)
         weights = [random.uniform(0.9, 1.1) for _ in range(n)]
         total_weight = sum(weights)
@@ -190,7 +183,44 @@ def generate_invoices_for_shipments(week_map):
     return invoices 
         
 
+def insert_invoices(engine, invoices):
 
+    invoices = [
+    dict(
+        shipment_id=shipment_id,
+        amount=amount,
+        invoice_type=invoice_type,
+        parent_invoice_id=parent_invoice_id
+    )
+    for shipment_id, amount, invoice_type, parent_invoice_id in invoices
+    ]
+    
+    normal_invoices = [i for i in invoices if i["invoice_type"] == "NORMAL"]
+    correction_invoices = [i for i in invoices if i["invoice_type"] == "CORRECTION"]
+
+    normal_invoice_map = {}
+
+    try:
+        stmt = text("""INSERT INTO invoices(shipment_id, amount, invoice_type, parent_invoice_id)
+            VALUES (:shipment_id, :amount, :invoice_type, :parent_invoice_id)
+                    RETURNING invoice_id
+            """)
+        
+        with engine.begin() as conn:
+            for invoice in normal_invoices:
+                result = conn.execute(stmt, invoice)
+                invoice_id = result.scalar()
+                normal_invoice_map[invoice["shipment_id"]] = invoice_id
+            
+            for invoice in correction_invoices:
+                invoice["parent_invoice_id"] = normal_invoice_map[invoice["shipment_id"]]
+                conn.execute(stmt, invoice)
+                
+
+    except Exception as e: 
+        print(f"Wystąpił błąd: {e}")
+
+    
 def main():
 
     base_date = datetime(2026, 3, 9)
@@ -206,6 +236,14 @@ def main():
     shipment_list = generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids)
 
     insert_shipments(engine, shipment_list)
+
+    shipment_rows = read_shipments_from_db(engine)
+
+    week_map = build_week_shipment_map(shipment_rows)
+
+    invoices = generate_invoices_for_shipments(week_map)
+
+    insert_invoices(engine, invoices)
 
 if __name__ == "__main__":
 
