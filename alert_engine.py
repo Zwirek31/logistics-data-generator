@@ -35,8 +35,24 @@ def load_state(filename):
                 return None
     return None
 
+def fetch_weeks(engine, last_processed_week):
 
+    query = "SELECT week_start, revenue_delta, delay_percentage FROM weekly_kpi_with_delta"
+    params = {}
+    
+    with engine.connect() as conn:
+        if last_processed_week is not None:
+            query += " WHERE week_start > :last_processed_week"
+            params["last_processed_week"] = last_processed_week
 
+        query += " ORDER BY week_start"
+        stmt = text(query)
+        result = conn.execute(stmt, params)
+        unprocessed_weeks = [(row.week_start, row.revenue_delta, row.delay_percentage) for row in result]
+
+    return unprocessed_weeks
 
 def main():
-     filename = "state.json"
+    filename = "state.json"
+
+    engine = connect_to_db()
