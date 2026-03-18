@@ -52,6 +52,26 @@ def fetch_weeks(engine, last_processed_week):
 
     return unprocessed_weeks
 
+def get_last_alert_state(engine):
+    alert_types = ["REVENUE_DROP", "DELAY_SPIKE"]
+    states = {}
+
+    with engine.connect() as conn:
+        for alert_type in alert_types:
+            stmt = (text("SELECT event_type FROM alert_log WHERE alert_type= :alert_type ORDER BY created_at DESC LIMIT 1"))
+            result = conn.execute(stmt, {"alert_type": alert_type})
+            row = result.fetchone()
+
+            if row is None:
+                last_event = None
+            else:
+                last_event = row.event_type
+            states[alert_type] = last_event
+
+    return states
+
+
+
 def main():
     filename = "state.json"
 
