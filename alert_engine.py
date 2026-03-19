@@ -28,8 +28,8 @@ def load_state(filename):
         cursor = data.get("last_processed_week")
         if isinstance(cursor, str) and cursor.strip():
             try:
-                last_cursor = datetime.fromisoformat(cursor)
-                return last_cursor
+                last_processed_week = datetime.fromisoformat(cursor)
+                return last_processed_week
             except ValueError:
                 return None
     return None
@@ -121,20 +121,42 @@ def run_alert_engine(engine, unprocessed_weeks, states):
                 states["DELAY_SPIKE"] = "RESOLVED"
 
     if unprocessed_weeks:
-        new_last_cursor = unprocessed_weeks[-1][0]
+        new_last_processed_week = unprocessed_weeks[-1][0]
     
     else:
-        new_last_cursor = None
+        new_last_processed_week = None
 
-    return new_last_cursor
+    return new_last_processed_week
 
-def save_state():
+def save_state(filename, new_last_processed_week):
 
+    if new_last_processed_week:
+        last_processed_week = new_last_processed_week.isoformat()
+    else:
+        last_processed_week = None
 
+    with open(filename, "w") as f:
+        json.dump(last_processed_week, f)
 
 def main():
     filename = "state.json"
 
     engine = connect_to_db()
+
+    last_processed_week = load_state(filename)
+
+    unprocessed_weeks = fetch_weeks(engine, last_processed_week)
+
+    states = get_last_alert_state(engine)
+
+    new_last_processed_week = run_alert_engine(engine, unprocessed_weeks, states)
+
+    save_state(filename, new_last_processed_week)
+
+if __name__ == "__main__":
+
+    main()
+
+
 
 
