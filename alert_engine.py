@@ -3,8 +3,7 @@ import sys
 import json
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-import random
+from datetime import datetime
 
 load_dotenv()
 
@@ -70,9 +69,72 @@ def get_last_alert_state(engine):
 
     return states
 
+def run_alert_engine(engine, unprocessed_weeks, states):
+
+    stmt = (text("""INSERT INTO alert_log (
+                        week_start,
+                        alert_type,
+                        event_type
+                    )
+            VALUES (:week_start, :alert_type, :event_type)"""))
+    
+    with engine.begin() as conn:
+        for week_start, revenue_delta, delay_percentage in unprocessed_weeks:
+
+            is_drop = revenue_delta <= -0.2
+            is_spike = delay_percentage >= 0.2
+
+            state = states["REVENUE_DROP"]
+
+            if is_drop and state != "RAISED":
+                conn.execute(stmt, {
+                    "week_start": week_start,
+                    "alert_type": "REVENUE_DROP",
+                    "event_type": "RAISED" 
+                })
+                states["REVENUE_DROP"]="RAISED"
+
+            elif not is_drop and state == "RAISED":
+                conn.execute(stmt, {
+                "week_start":week_start,
+                "alert_type":"REVENUE_DROP",
+                "event_type":"RESOLVED"
+                })
+                states["REVENUE_DROP"] = "RESOLVED"
+            
+            state = states["DELAY_SPIKE"]
+
+            if is_spike and state != "RAISED":
+                conn.execute(stmt, {
+                "week_start": week_start,
+                "alert_type": "DELAY_SPIKE",
+                "event_type": "RAISED" 
+                })
+                states["DELAY_SPIKE"] = "RAISED"
+
+            elif not is_spike and state =="RAISED":
+                conn.execute(stmt, {
+                "week_start": week_start,
+                "alert_type": "DELAY_SPIKE",
+                "event_type": "RESOLVED" 
+                })
+                states["DELAY_SPIKE"] = "RESOLVED"
+
+    if unprocessed_weeks:
+        new_last_cursor = unprocessed_weeks[-1][0]
+    
+    else:
+        new_last_cursor = None
+
+    return new_last_cursor
+
+def save_state():
+
 
 
 def main():
     filename = "state.json"
 
     engine = connect_to_db()
+
+
