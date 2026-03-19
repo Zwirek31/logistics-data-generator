@@ -137,8 +137,11 @@ def save_state(filename, new_last_processed_week):
     else:
         last_processed_week = None
 
+    data = {
+        "last_processed_week": last_processed_week
+    }
     with open(filename, "w") as f:
-        json.dump(last_processed_week, f)
+        json.dump(data, f)
 
 def main():
 
