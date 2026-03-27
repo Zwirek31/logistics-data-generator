@@ -54,20 +54,38 @@ def fetch_weeks(engine, last_processed_week):
     return unprocessed_weeks
 
 def get_last_alert_state(engine):
-    alert_types = ["REVENUE_DROP", "DELAY_SPIKE"]
+    
     states = {}
 
     with engine.connect() as conn:
-        for alert_type in alert_types:
-            stmt = (text("SELECT event_type FROM alert_log WHERE alert_type= :alert_type ORDER BY created_at DESC LIMIT 1"))
-            result = conn.execute(stmt, {"alert_type": alert_type})
-            row = result.fetchone()
+        query = (text("SELECT alert_type FROM alert_rules"))
+        result = conn.execute(query)
+        alert_types = [row.alert_type for row in result]
 
-            if row is None:
-                last_event = None
-            else:
-                last_event = row.event_type
-            states[alert_type] = last_event
+        stmt = text("""
+            WITH sorted_events AS (
+                SELECT 
+                    alert_type, 
+                    event_type,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY alert_type 
+                        ORDER BY created_at DESC
+                    ) AS rn
+                FROM alert_log
+            )
+            SELECT
+            alert_type,
+            event_type
+            FROM sorted_events
+            WHERE rn = 1
+        """)
+
+        rows = conn.execute(stmt).fetchall()
+        
+        states = {row.alert_type: row.event_type for row in rows}
+        for alert_type in alert_types:
+            if alert_type not in states:
+                states[alert_type] = None
 
     return states
 
@@ -81,49 +99,67 @@ def run_alert_engine(engine, unprocessed_weeks, states):
             VALUES (:week_start, :alert_type, :event_type)"""))
     
     with engine.begin() as conn:
-        for week_start, revenue_delta, delay_percentage in unprocessed_weeks:
+        query = (text("""SELECT 
+                      alert_type,
+                      metric,
+                      operator,
+                      threshold,
+                      recovery_threshold
+                        FROM alert_rules"""))
+        result = conn.execute(query)
+        rules = result.fetchall()
 
-            is_drop = revenue_delta <= -0.2
-            is_spike = delay_percentage >= 0.2
-
-            state = states["REVENUE_DROP"]
-
-            if is_drop and state != "RAISED":
-                conn.execute(stmt, {
-                    "week_start": week_start,
-                    "alert_type": "REVENUE_DROP",
-                    "event_type": "RAISED" 
-                })
-                states["REVENUE_DROP"]="RAISED"
-
-            elif not is_drop and state == "RAISED":
-                conn.execute(stmt, {
-                "week_start":week_start,
-                "alert_type":"REVENUE_DROP",
-                "event_type":"RESOLVED"
-                })
-                states["REVENUE_DROP"] = "RESOLVED"
+        def less_equal(a, b):
+            return a <= b
             
-            state = states["DELAY_SPIKE"]
+        def greater_equal(a, b):
+            return a >= b
+        
+        operators = {
+            "<=": less_equal,
+            ">=": greater_equal
+        }
 
-            if is_spike and state != "RAISED":
-                conn.execute(stmt, {
-                "week_start": week_start,
-                "alert_type": "DELAY_SPIKE",
-                "event_type": "RAISED" 
-                })
-                states["DELAY_SPIKE"] = "RAISED"
+        recovery_ops = {
+            "<=": greater_equal, 
+            ">=": less_equal
+        }
 
-            elif not is_spike and state =="RAISED":
-                conn.execute(stmt, {
-                "week_start": week_start,
-                "alert_type": "DELAY_SPIKE",
-                "event_type": "RESOLVED" 
-                })
-                states["DELAY_SPIKE"] = "RESOLVED"
+        for row in unprocessed_weeks:
+            for rule in rules:
+                alert_type = rule.alert_type
+                state = states[alert_type]
+                metric = rule.metric
+                operator = rule.operator
+                threshold = rule.threshold
+                recovery_threshold = rule.recovery_threshold
+            
+                value = row[metric]
+
+                op_trigger = operators[operator]
+                op_recovery = recovery_ops[operator]
+
+                is_triggered = op_trigger(value, threshold)
+                is_recovered = op_recovery(value, recovery_threshold)
+
+                if is_triggered and state != "RAISED":
+                    conn.execute(stmt, {
+                    "week_start": row.week_start,
+                    "alert_type": alert_type,
+                    "event_type": "RAISED"
+                    })
+                    states[alert_type] = "RAISED"
+
+                elif is_recovered and state == "RAISED":
+                    conn.execute(stmt, {
+                    "week_start":row.week_start,
+                    "alert_type":alert_type,
+                    "event_type":"RESOLVED"
+                    })
+                    states[alert_type] = "RESOLVED"
 
     if unprocessed_weeks:
-        new_last_processed_week = unprocessed_weeks[-1][0]
+        new_last_processed_week = unprocessed_weeks[-1].week_start
     
     else:
         new_last_processed_week = None
