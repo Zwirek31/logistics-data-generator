@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import random
 from collections import defaultdict
+from math import ceil
 
 load_dotenv()
 
@@ -98,12 +99,14 @@ def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
 
         if is_spike:
             delay_percentage = random.uniform(0.25, 0.40)
+            minimal_required = ceil(number_of_shipments * 0.25)
+            delayed_count = max(int(number_of_shipments * delay_percentage), minimal_required)
             spike_happened = True
         
         else:
             delay_percentage = random.uniform(0.05, 0.10)
+            delayed_count = int(number_of_shipments * delay_percentage)
 
-        delayed_count = int(number_of_shipments * delay_percentage)
         on_time_shipments = number_of_shipments - delayed_count
 
         types = ["delayed"] * delayed_count + ["on_time"] * on_time_shipments
