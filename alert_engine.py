@@ -49,7 +49,7 @@ def fetch_weeks(engine, last_processed_week):
 
     with engine.connect() as conn:
         result = conn.execute(text(query), params)
-        unprocessed_weeks = [(row.week_start, row.revenue_delta, row.delay_percentage) for row in result]
+        unprocessed_weeks = result.mappings().all()
 
     return unprocessed_weeks
 
@@ -60,7 +60,7 @@ def get_last_alert_state(engine):
     with engine.connect() as conn:
         query = (text("SELECT alert_type FROM alert_rules"))
         result = conn.execute(query)
-        alert_types = [row.alert_type for row in result]
+        alert_types = [row["alert_type"] for row in result]
 
         stmt = text("""
             WITH sorted_events AS (
@@ -107,7 +107,7 @@ def run_alert_engine(engine, unprocessed_weeks, states):
                       recovery_threshold
                         FROM alert_rules"""))
         result = conn.execute(query)
-        rules = result.fetchall()
+        rules = result.mappings().all()
 
         def less_equal(a, b):
             return a <= b
@@ -127,12 +127,12 @@ def run_alert_engine(engine, unprocessed_weeks, states):
 
         for row in unprocessed_weeks:
             for rule in rules:
-                alert_type = rule.alert_type
+                alert_type = rule["alert_type"]
                 state = states[alert_type]
-                metric = rule.metric
-                operator = rule.operator
-                threshold = rule.threshold
-                recovery_threshold = rule.recovery_threshold
+                metric = rule["metric"]
+                operator = rule["operator"]
+                threshold = rule["threshold"]
+                recovery_threshold = rule["recovery_threshold"]
             
                 value = row[metric]
 
@@ -144,7 +144,7 @@ def run_alert_engine(engine, unprocessed_weeks, states):
 
                 if is_triggered and state != "RAISED":
                     conn.execute(stmt, {
-                    "week_start": row.week_start,
+                    "week_start": row["week_start"],
                     "alert_type": alert_type,
                     "event_type": "RAISED"
                     })
@@ -152,14 +152,14 @@ def run_alert_engine(engine, unprocessed_weeks, states):
 
                 elif is_recovered and state == "RAISED":
                     conn.execute(stmt, {
-                    "week_start":row.week_start,
+                    "week_start":row["week_start"],
                     "alert_type":alert_type,
                     "event_type":"RESOLVED"
                     })
                     states[alert_type] = "RESOLVED"
 
     if unprocessed_weeks:
-        new_last_processed_week = unprocessed_weeks[-1].week_start
+        new_last_processed_week = unprocessed_weeks[-1]["week_start"]
     
     else:
         new_last_processed_week = None
