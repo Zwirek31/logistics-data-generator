@@ -59,7 +59,7 @@ def get_last_alert_state(engine):
 
     with engine.connect() as conn:
         query = (text("SELECT alert_type FROM alert_rules"))
-        result = conn.execute(query)
+        result = conn.execute(query).mappings()
         alert_types = [row["alert_type"] for row in result]
 
         stmt = text("""
