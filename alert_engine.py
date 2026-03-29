@@ -38,13 +38,15 @@ def fetch_weeks(engine, last_processed_week):
 
     query = "SELECT week_start, revenue_delta, delay_percentage FROM weekly_kpi_with_delta"
     params = {}
-    conditions = ["revenue_delta IS NOT NULL"]
+    conditions = []
 
     if last_processed_week is not None:
         conditions.append("week_start > :last_processed_week")
         params["last_processed_week"] = last_processed_week
 
-    query += " WHERE " + " AND ".join(conditions)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+        
     query += " ORDER BY week_start"
 
     with engine.connect() as conn:
@@ -135,13 +137,15 @@ def run_alert_engine(engine, unprocessed_weeks, states):
                 recovery_threshold = rule["recovery_threshold"]
             
                 value = row[metric]
+                if value is None:
+                    continue
 
                 op_trigger = operators[operator]
                 op_recovery = recovery_ops[operator]
 
                 is_triggered = op_trigger(value, threshold)
                 is_recovered = op_recovery(value, recovery_threshold)
-
+                
                 if is_triggered and state != "RAISED":
                     conn.execute(stmt, {
                     "week_start": row["week_start"],
