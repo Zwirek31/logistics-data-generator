@@ -1,23 +1,9 @@
-from sqlalchemy import create_engine, text
-import sys
-import os
-from dotenv import load_dotenv
+from sqlalchemy import text
 from datetime import datetime, timedelta
 import random
 from collections import defaultdict
 from math import ceil
-
-load_dotenv()
-
-def connect_to_db():
-    try:
-        db_url = os.getenv("SUPABASE_DB_URL")
-        engine = create_engine(db_url)
-        return engine
-
-    except Exception as e:
-        print(f"Startup error: {e}")
-        sys.exit()
+from db import connect_to_db
 
 def clear_tables(engine):
     tables = ["invoices", "shipments", "customers", "warehouses"]

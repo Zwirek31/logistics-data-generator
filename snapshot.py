@@ -21,5 +21,4 @@ def run_snapshot(snapshot_date):
         """)
     
         params = {"snapshot_date": snapshot_date}
-
         conn.execute(query, params)

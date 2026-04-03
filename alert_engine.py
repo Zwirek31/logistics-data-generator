@@ -1,21 +1,8 @@
-from sqlalchemy import create_engine, text
-import sys
+from sqlalchemy import text
 import json
 import os
-from dotenv import load_dotenv
 from datetime import datetime
-
-load_dotenv()
-
-def connect_to_db():
-    try:
-        db_url = os.getenv("SUPABASE_DB_URL")
-        engine = create_engine(db_url)
-        return engine
-
-    except Exception as e:
-        print(f"Startup error: {e}")
-        sys.exit()
+from db import connect_to_db
 
 def load_state(filename):
     if not os.path.exists(filename):
@@ -181,7 +168,7 @@ def save_state(filename, new_last_processed_week):
     with open(filename, "w") as f:
         json.dump(data, f)
 
-def main():
+def main(snapshot_date):
 
     filename = "state.json"
 
@@ -189,7 +176,7 @@ def main():
 
     last_processed_week = load_state(filename)
 
-    unprocessed_weeks = fetch_weeks(engine, last_processed_week)
+    unprocessed_weeks = fetch_weeks(engine, last_processed_week, snapshot_date)
 
     states = get_last_alert_state(engine)
 
