@@ -34,19 +34,17 @@ def load_state(filename):
                 return None
     return None
 
-def fetch_weeks(engine, last_processed_week):
+def fetch_weeks(engine, last_processed_week, snapshot_date):
 
     query = "SELECT week_start, revenue_delta, delay_percentage FROM weekly_kpi_with_delta"
-    params = {}
-    conditions = []
+    params = {"snapshot_date": snapshot_date}
+    conditions = ["week_start < date_trunc('week', :snapshot_date)"]
 
     if last_processed_week is not None:
         conditions.append("week_start > :last_processed_week")
         params["last_processed_week"] = last_processed_week
 
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-        
+    query += " WHERE " + " AND ".join(conditions)  
     query += " ORDER BY week_start"
 
     with engine.connect() as conn:

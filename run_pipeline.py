@@ -16,7 +16,6 @@ def run_pipeline(snapshot_date=None):
 
     try:
         generate_data()
-
     except Exception as e:
         print(f"Generator error: {e}")
         sys.exit()
