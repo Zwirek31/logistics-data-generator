@@ -1,4 +1,5 @@
 from sqlalchemy import text
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import random
 from collections import defaultdict
