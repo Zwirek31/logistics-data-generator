@@ -63,71 +63,6 @@ def insert_customers(engine):
 
     return customer_ids
 
-def generate_shipments_for_5_weeks(base_date, warehouse_ids, customer_ids):
-    
-    week_start = []
-    
-    for week in range(5):
-        shift = week * 7
-        week_number = base_date + timedelta(days=shift)
-        week_start.append(week_number)
-
-    shipment_list = []
-    spike_happened = False
-
-    for week in week_start:
-        if week == week_start[-1] and spike_happened == False:
-            is_spike = True
-        
-        else:
-            is_spike = random.random() < 0.2
-
-        number_of_shipments = random.randint(8, 15)
-
-        if is_spike:
-            delay_percentage = random.uniform(0.25, 0.40)
-            minimal_required = ceil(number_of_shipments * 0.25)
-            delayed_count = max(int(number_of_shipments * delay_percentage), minimal_required)
-            spike_happened = True
-        
-        else:
-            delay_percentage = random.uniform(0.05, 0.10)
-            delayed_count = int(number_of_shipments * delay_percentage)
-
-        on_time_shipments = number_of_shipments - delayed_count
-
-        types = ["delayed"] * delayed_count + ["on_time"] * on_time_shipments
-
-        random.shuffle(types)
-        
-        for shipment_type in types:
-            warehouse_id = random.choice(warehouse_ids)
-            customer_id = random.choice(customer_ids)
-            hours = random.randint(0, 72)
-            created_at = week + timedelta(hours=hours)
-            random_hours = random.randint(24, 48)
-            planned_delivery_date = created_at + timedelta(hours=random_hours)
-            delay = random.randint(1, 12)
-            random_seconds = random.randint(0, 6 * 3600)
-
-            if shipment_type == "delayed":
-                actual_delivery_date = planned_delivery_date + timedelta(hours=delay)
-            
-            else:
-                actual_delivery_date = planned_delivery_date - timedelta(seconds=random_seconds)
-
-            status = "DELIVERED"
-            shipment = {
-                "customer_id": customer_id,
-                "created_at": created_at,
-                "warehouse_id": warehouse_id,
-                "planned_delivery_date": planned_delivery_date,
-                "actual_delivery_date": actual_delivery_date,
-                "status": status
-            }
-            shipment_list.append(shipment)
-            
-    return shipment_list
 
 def insert_shipments(engine, shipment_list):
 
@@ -240,8 +175,6 @@ def insert_invoices(engine, invoices):
 
     
 def main():
-
-    base_date = datetime(2026, 3, 9)
 
     engine = connect_to_db()
 

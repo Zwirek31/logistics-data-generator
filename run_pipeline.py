@@ -19,6 +19,8 @@ def run_pipeline(snapshot_date=None):
     if snapshot_date is None:
         snapshot_date = datetime.now(timezone.utc).date()
 
+    today = datetime.now().date()
+    
     logging.info("Pipeline started for %s", snapshot_date)
 
     try:
