@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import random
 
 def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
@@ -13,7 +13,7 @@ def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
     shipment_list = []
     
     for week in week_start:
-        number_of_shipments = random.randint(8, 15)
+        number_of_shipments = random.randint(15, 20)
 
         for _ in range(number_of_shipments):
             warehouse_id = random.choice(warehouse_ids)
@@ -23,7 +23,7 @@ def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
             created_at = week + timedelta(days=day_offset, hours=hour_offset)
             random_hours = random.randint(24, 72)
             planned_delivery_date = created_at + timedelta(hours=random_hours)
-            status = "DELIVERED"
+            status = None
             
             shipment = {
             "customer_id": customer_id,
