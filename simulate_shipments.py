@@ -2,12 +2,12 @@ from datetime import datetime, timedelta, time
 from collections import defaultdict
 import random
 
-def run_logistics_simulation(shipment_list):
+def run_logistics_simulation(shipments_to_simulate):
 
     shipments_to_insert = []
     shipments_by_day = defaultdict(list)
 
-    for shipment in shipment_list:
+    for shipment in shipments_to_simulate:
         day = shipment["created_at"].date()
         shipments_by_day[day].append(shipment)
     

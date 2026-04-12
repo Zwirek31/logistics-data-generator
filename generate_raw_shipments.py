@@ -10,7 +10,7 @@ def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
         start_of_week = monday + timedelta(days=i*7)
         week_start.append(start_of_week)
 
-    shipment_list = []
+    shipments_to_simulate = []
     
     for week in week_start:
         number_of_shipments = random.randint(15, 20)
@@ -34,6 +34,6 @@ def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
             "status": status
         }
         
-            shipment_list.append(shipment)
+            shipments_to_simulate.append(shipment)
             
-    return shipment_list
+    return shipments_to_simulate
