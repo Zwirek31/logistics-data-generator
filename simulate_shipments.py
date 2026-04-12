@@ -2,8 +2,9 @@ from datetime import datetime, timedelta, time
 from collections import defaultdict
 import random
 
-def simulate_shipments(shipment_list):
+def run_logistics_simulation(shipment_list):
 
+    shipments_to_insert = []
     shipments_by_day = defaultdict(list)
 
     for shipment in shipment_list:
@@ -36,10 +37,12 @@ def simulate_shipments(shipment_list):
         time_per_shipment = 0.75
         
         for i,  shipment in enumerate(to_be_shipped):
-                random_offset = timedelta(hours=i*time_per_shipment + random.uniform(0, 0.2))
-                shipment['status'] = "DELIVERED"
-                shipment['actual_delivery_date'] = current_time + random_offset
+            random_offset = timedelta(hours=i*time_per_shipment + random.uniform(0, 0.2))
+            shipment['status'] = "DELIVERED"
+            shipment['actual_delivery_date'] = current_time + random_offset
+            shipments_to_insert.append(shipment)
 
         queue = [s for s in queue if s not in to_be_shipped]
         current_day += timedelta(days=1)
     
+    return shipments_to_insert
