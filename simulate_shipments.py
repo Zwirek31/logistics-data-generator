@@ -20,26 +20,26 @@ def run_logistics_simulation(shipments_to_simulate):
     while current_day <= end_day or queue:
         if current_day in shipments_by_day:
             for s in shipments_by_day[current_day]:
-                s["processing_time"] = random.randint(12, 48)
                 queue.append(s)
         
-        available_today = []
+        queue.sort(key=lambda x: x['planned_delivery_date'])
+        
+        current_time = datetime.combine(current_day, time(8, 0))
+        to_be_shipped = []
+
         for shipment in queue:
-            if (shipment["created_at"] + timedelta(hours=shipment["processing_time"])).date() <= current_day:
-                available_today.append(shipment)
-
-        available_today.sort(key=lambda x: x['planned_delivery_date'])
-        processed_today = min(len(available_today), capacity)
-        to_be_shipped = available_today[:processed_today]
-
-        base_offset = 8
-        current_time = datetime.combine(current_day, time.min) + timedelta(hours=base_offset)
+            if len(to_be_shipped) == capacity:
+                break
+            if shipment["ready_at"] <= current_time:
+                to_be_shipped.append(shipment)
+            
+        
         time_per_shipment = 0.75
         
         for i,  shipment in enumerate(to_be_shipped):
-            random_offset = timedelta(hours=i*time_per_shipment + random.uniform(0, 0.2))
+            potential_delivery_time = current_time + timedelta(hours=i * time_per_shipment + random.uniform(-0.05, 0.05))
             shipment['status'] = "DELIVERED"
-            shipment['actual_delivery_date'] = current_time + random_offset
+            shipment['actual_delivery_date'] = max(potential_delivery_time, current_time)
             shipments_to_insert.append(shipment)
 
         queue = [s for s in queue if s not in to_be_shipped]

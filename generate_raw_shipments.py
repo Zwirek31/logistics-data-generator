@@ -23,6 +23,8 @@ def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
             created_at = week + timedelta(days=day_offset, hours=hour_offset)
             random_hours = random.randint(24, 72)
             planned_delivery_date = created_at + timedelta(hours=random_hours)
+            prep_time = random.randint(12, 48)
+            ready_at = created_at + timedelta(hours=prep_time)
             status = None
             
             shipment = {
@@ -31,6 +33,7 @@ def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
             "warehouse_id": warehouse_id,
             "planned_delivery_date": planned_delivery_date,
             "actual_delivery_date": None,
+            "ready_at": ready_at,
             "status": status
         }
         
