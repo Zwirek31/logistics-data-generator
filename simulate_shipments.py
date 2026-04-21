@@ -1,48 +1,45 @@
 from datetime import datetime, timedelta, time
-from collections import defaultdict
 import random
 
-def run_logistics_simulation(shipments_to_simulate):
-
-    shipments_to_insert = []
-    shipments_by_day = defaultdict(list)
-
-    for shipment in shipments_to_simulate:
-        day = shipment["created_at"].date()
-        shipments_by_day[day].append(shipment)
+class SimulationEngine():
+    def __init__(self, capacity=20):
+        self.capacity = capacity
+        self.queue = []
     
-    queue = []
-    capacity = 10
-    start_day = min(shipments_by_day)
-    end_day = max(shipments_by_day)
-    current_day = start_day
+    def start_of_day(self, day):
+        return datetime.combine(day, time(8, 0))
 
-    while current_day <= end_day or queue:
-        if current_day in shipments_by_day:
-            for s in shipments_by_day[current_day]:
-                queue.append(s)
-        
-        queue.sort(key=lambda x: x['planned_delivery_date'])
-        
-        current_time = datetime.combine(current_day, time(8, 0))
+    def process_day(self, day, new_shipments):
+        self.queue.extend(new_shipments)
+        self.queue.sort(key=lambda x: x['planned_delivery_date'])
+        new_queue = []
         to_be_shipped = []
+        current_time = self.start_of_day(day)
 
-        for shipment in queue:
-            if len(to_be_shipped) == capacity:
-                break
-            if shipment["ready_at"] <= current_time:
-                to_be_shipped.append(shipment)
-            
+        for shipment in self.queue:
+            if shipment["ready_at"] > current_time:
+                new_queue.append(shipment)
+            else:
+                if len(to_be_shipped) >= self.capacity:
+                    new_queue.append(shipment)
+                else:    
+                    to_be_shipped.append(shipment)
         
-        time_per_shipment = 0.75
-        
-        for i,  shipment in enumerate(to_be_shipped):
-            potential_delivery_time = current_time + timedelta(hours=i * time_per_shipment + random.uniform(-0.05, 0.05))
+        finished_shipemnts = []
+        current_time_tracker = current_time
+
+        for shipment in to_be_shipped:
+            time_per_shipemnt = timedelta(minutes=random.randint(20, 45))
+            delivery_time = current_time_tracker + time_per_shipemnt
+
             shipment['status'] = "DELIVERED"
-            shipment['actual_delivery_date'] = max(potential_delivery_time, current_time)
-            shipments_to_insert.append(shipment)
+            shipment['actual_delivery_date'] = delivery_time
 
-        queue = [s for s in queue if s not in to_be_shipped]
-        current_day += timedelta(days=1)
+            current_time_tracker = delivery_time
+            finished_shipemnts.append(shipment)
+
+        self.queue = new_queue
+        
+        return finished_shipemnts
     
-    return shipments_to_insert
+    
