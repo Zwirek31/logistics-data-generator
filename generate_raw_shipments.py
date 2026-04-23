@@ -1,7 +1,7 @@
 from datetime import timedelta
 import random
 
-def generate_shipments_for_n_weeks(today, warehouse_ids, customer_ids, n=10):
+def generate_shipments_for_day(today, warehouse_ids, customer_ids, n=10):
     
     monday = today - timedelta(days=today.weekday())
     week_start = []
