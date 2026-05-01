@@ -25,7 +25,7 @@ class SimulationEngine():
                 else:    
                     to_be_shipped.append(shipment)
         
-        finished_shipemnts = []
+        finished_shipments = []
         current_time_tracker = current_time
 
         for shipment in to_be_shipped:
@@ -36,10 +36,10 @@ class SimulationEngine():
             shipment['actual_delivery_date'] = delivery_time
 
             current_time_tracker = delivery_time
-            finished_shipemnts.append(shipment)
+            finished_shipments.append(shipment)
 
         self.queue = new_queue
         
-        return finished_shipemnts
+        return finished_shipments
     
     
