@@ -1,42 +1,32 @@
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 import random
 
-def generate_shipments_for_day(today, warehouse_ids, customer_ids, n=10):
+def generate_shipments_for_day(day, demand, warehouse_ids, customer_ids):
     
-    monday = today - timedelta(days=today.weekday())
-    week_start = []
-    
-    for i in range(n):
-        start_of_week = monday + timedelta(days=i*7)
-        week_start.append(start_of_week)
+    new_shipments = []
 
-    shipments_to_simulate = []
-    
-    for week in week_start:
-        number_of_shipments = random.randint(15, 20)
-
-        for _ in range(number_of_shipments):
-            warehouse_id = random.choice(warehouse_ids)
-            customer_id = random.choice(customer_ids)
-            day_offset = random.randint(0, 6)
-            hour_offset = random.randint(0, 23)
-            created_at = week + timedelta(days=day_offset, hours=hour_offset)
-            random_hours = random.randint(24, 72)
-            planned_delivery_date = created_at + timedelta(hours=random_hours)
-            prep_time = random.randint(12, 48)
-            ready_at = created_at + timedelta(hours=prep_time)
-            status = None
+    for _ in range(demand):
+        warehouse_id = random.choice(warehouse_ids)
+        customer_id = random.choice(customer_ids)
+        hour = random.randint(0, 23)
+        minute = random.randint(0, 59)
+        created_at = datetime.combine(day, time(hour, minute))
+        prep_time = random.randint(12, 48)
+        buffer = random.randint(6, 36)
+        ready_at = created_at + timedelta(hours=prep_time)
+        planned_delivery_date = ready_at + timedelta(hours=buffer)
+        status = None
             
-            shipment = {
-            "customer_id": customer_id,
-            "created_at": created_at,
-            "warehouse_id": warehouse_id,
-            "planned_delivery_date": planned_delivery_date,
-            "actual_delivery_date": None,
-            "ready_at": ready_at,
-            "status": status
+        shipment = {
+        "customer_id": customer_id,
+        "created_at": created_at,
+        "warehouse_id": warehouse_id,
+        "ready_at": ready_at,
+        "planned_delivery_date": planned_delivery_date,
+        "actual_delivery_date": None,
+        "status": status
         }
         
-            shipments_to_simulate.append(shipment)
+        new_shipments.append(shipment)
             
-    return shipments_to_simulate
+    return new_shipments
